@@ -27,20 +27,13 @@
       "description": "GUID string used for local Streamline/NGX development when no NVIDIA Application ID is available. Store private values in .env."
     },
     {
-      "key": "enabled",
-      "label": "Enable DLSS on Startup",
-      "type": "bool",
-      "env": "VULTRA_DLSS_ENABLED",
-      "default": "false",
-      "description": "If true, the plugin activates the DLSS provider during startup."
-    },
-    {
       "key": "mode",
       "label": "Startup DLSS Mode",
-      "type": "string",
+      "type": "enum",
       "env": "VULTRA_DLSS_MODE",
       "default": "performance",
-      "description": "Startup mode: ultra_quality, quality, balanced, performance, ultra_performance, dlaa, or off."
+      "options": ["ultra_quality", "quality", "balanced", "performance", "ultra_performance", "dlaa", "off"],
+      "description": "Quality preset applied when the plugin loads ('off' keeps the provider registered but inactive). Enabling/disabling the plugin itself is the on/off switch."
     }
   ]
 }

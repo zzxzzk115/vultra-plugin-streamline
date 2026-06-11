@@ -50,16 +50,6 @@ namespace
         return result.ec == std::errc {} ? out : fallback;
     }
 
-    [[nodiscard]] bool getEnvBool(const char* name, const bool fallback = false)
-    {
-        auto value = getEnvString(name);
-        if (value.empty())
-            return fallback;
-        for (auto& ch : value)
-            ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
-        return value == "1" || value == "true" || value == "yes" || value == "on";
-    }
-
     // Directory of this plugin DLL itself. The Streamline runtime DLLs are bundled next to it,
     // so they are found with zero user configuration; env vars remain as overrides.
     [[nodiscard]] std::string pluginModuleDirectory()
@@ -998,11 +988,12 @@ namespace
 
             const bool registered = upscaler->registerProvider(m_Provider);
             upscaler->setActiveProvider(m_Provider.name());
-            const bool defaultEnabled = getEnvBool("VULTRA_DLSS_ENABLED", false);
+            // Enabling the plugin IS the on/off switch; the startup mode only picks the quality
+            // preset ("off" keeps the provider registered but inactive).
             const auto defaultModeName = getEnvString("VULTRA_DLSS_MODE");
-            const auto defaultMode =
-                vultra::upscalerModeFromName(defaultModeName.empty() ? "performance" : defaultModeName);
             const auto normalizedModeName = normalizeModeName(defaultModeName);
+            auto       defaultMode =
+                vultra::upscalerModeFromName(defaultModeName.empty() ? "performance" : defaultModeName);
             if (!defaultModeName.empty() && defaultMode == vultra::UpscalerMode::eOff &&
                 normalizedModeName != "off")
             {
@@ -1010,12 +1001,12 @@ namespace
                             "Accepted values: ultra_quality, quality, balanced, performance, "
                             "ultra_performance, dlaa, off.\n",
                             defaultModeName.c_str());
+                defaultMode = vultra::UpscalerMode::ePerformance;
             }
-            if (defaultEnabled)
-                upscaler->setMode(defaultMode == vultra::UpscalerMode::eOff ? vultra::UpscalerMode::ePerformance :
-                                                                            defaultMode);
-            else
+            if (defaultMode == vultra::UpscalerMode::eOff)
                 upscaler->setEnabled(false);
+            else
+                upscaler->setMode(defaultMode);
             std::printf("[vultra_plugin_dlss] installed provider\n");
             return registered;
         }
