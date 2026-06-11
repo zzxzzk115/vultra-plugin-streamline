@@ -1,0 +1,12 @@
+[vimport]
+version=1
+importer="script_lua"
+uid="ef43d83a52e2a3a0ec30be3f85e89621"
+
+[source]
+file="plugins/DLSS/render/passes/dlss_upscale.lua"
+
+[output]
+file="imported/script_lua/plugins/DLSS/render/passes/dlss_upscale.lua"
+
+[params]

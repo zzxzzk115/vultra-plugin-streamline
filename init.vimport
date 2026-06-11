@@ -1,0 +1,12 @@
+[vimport]
+version=1
+importer="script_lua"
+uid="5bcfbcd792aa8dff408459a0c42081c0"
+
+[source]
+file="plugins/DLSS/init.lua"
+
+[output]
+file="imported/script_lua/plugins/DLSS/init.lua"
+
+[params]

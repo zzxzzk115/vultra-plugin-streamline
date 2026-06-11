@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "id": "com.vultra.dlss",
+  "name": "Streamline Upscaler",
+  "version": "0.1.0",
+  "author": "Vultra",
+  "description": "Project-local NVIDIA Streamline bridge. V0 exposes DLSS Super Resolution; later versions can add more Streamline features. SDK paths and private IDs are loaded from local .env configuration.",
+  "platforms": ["windows"],
+  "loadPhase": "pre_render_device",
+  "native": "vultra_plugin_dlss",
+  "entry": "init.lua",
+  "config": [
+    {
+      "key": "streamlineSdkRoot",
+      "label": "Streamline SDK Root",
+      "type": "path",
+      "env": "VULTRA_DLSS_STREAMLINE_SDK_ROOT",
+      "required": true,
+      "description": "Local streamline-sdk-vX folder. Required to build the native plugin with Streamline headers/libs. Keep NVIDIA SDK source files outside version control."
+    },
+    {
+      "key": "streamlineBin",
+      "label": "Streamline Binary Folder",
+      "type": "path",
+      "env": "VULTRA_DLSS_STREAMLINE_BIN",
+      "description": "Folder containing sl.interposer.dll, sl.common.dll, sl.dlss.dll, and nvngx_dlss.dll. If empty, the plugin derives bin/x64 from the SDK root."
+    },
+    {
+      "key": "applicationId",
+      "label": "NVIDIA Application ID",
+      "type": "int",
+      "env": "VULTRA_DLSS_APPLICATION_ID",
+      "description": "NVIDIA-assigned numeric application id. Required for production DLSS/NGX release; leave empty for local Project ID development mode."
+    },
+    {
+      "key": "projectId",
+      "label": "Local Project ID",
+      "type": "string",
+      "env": "VULTRA_DLSS_PROJECT_ID",
+      "default": "7f3a9c21-84bd-46e2-91af-c5d7382b0e64",
+      "description": "GUID string used for local Streamline/NGX development when no NVIDIA Application ID is available. Store private values in .env."
+    },
+    {
+      "key": "enabled",
+      "label": "Enable DLSS on Startup",
+      "type": "bool",
+      "env": "VULTRA_DLSS_ENABLED",
+      "default": "false",
+      "description": "If true, the plugin activates the DLSS provider during startup. Keep this local while integration is being validated."
+    },
+    {
+      "key": "mode",
+      "label": "Startup DLSS Mode",
+      "type": "string",
+      "env": "VULTRA_DLSS_MODE",
+      "default": "performance",
+      "description": "Startup mode: ultra_quality, quality, balanced, performance, ultra_performance, dlaa, or off."
+    }
+  ]
+}

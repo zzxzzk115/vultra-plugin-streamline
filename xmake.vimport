@@ -1,0 +1,12 @@
+[vimport]
+version=1
+importer="script_lua"
+uid="581e1a6cfd2e575d44d6fbcd535cca62"
+
+[source]
+file="plugins/DLSS/xmake.lua"
+
+[output]
+file="imported/script_lua/plugins/DLSS/xmake.lua"
+
+[params]
