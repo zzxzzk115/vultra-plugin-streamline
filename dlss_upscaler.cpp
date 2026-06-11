@@ -29,6 +29,11 @@
 
 namespace
 {
+    // Absolute path of this plugin's root directory, handed over by the engine through the
+    // optional vultraSetPluginRoot export before install(). The Streamline runtime DLLs are
+    // bundled there.
+    std::string g_PluginRoot;
+
     [[nodiscard]] std::string getEnvString(const char* name)
     {
         const char* value = std::getenv(name);
@@ -719,7 +724,7 @@ namespace
             // The Streamline runtime DLLs are bundled in the plugin root, so the default needs no
             // environment configuration: the engine-provided plugin root, then this DLL's own folder.
             if (m_StreamlineBin.empty())
-                m_StreamlineBin = getEnvString("VULTRA_PLUGIN_ROOT");
+                m_StreamlineBin = g_PluginRoot;
             if (m_StreamlineBin.empty())
                 m_StreamlineBin = pluginModuleDirectory();
 
@@ -1039,3 +1044,7 @@ namespace
 
 PLUGIN_EXPORT vultra::EnginePlugin* vultraCreatePlugin() { return new DlssUpscalerPlugin(); }
 PLUGIN_EXPORT void                  vultraDestroyPlugin(vultra::EnginePlugin* plugin) { delete plugin; }
+PLUGIN_EXPORT void                  vultraSetPluginRoot(const char* absolutePath)
+{
+    g_PluginRoot = absolutePath == nullptr ? std::string {} : std::string {absolutePath};
+}
