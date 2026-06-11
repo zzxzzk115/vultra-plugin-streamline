@@ -55,6 +55,26 @@ namespace
         return value == "1" || value == "true" || value == "yes" || value == "on";
     }
 
+    // Directory of this plugin DLL itself. The Streamline runtime DLLs are bundled next to it,
+    // so they are found with zero user configuration; env vars remain as overrides.
+    [[nodiscard]] std::string pluginModuleDirectory()
+    {
+#if defined(_WIN32)
+        HMODULE module = nullptr;
+        if (::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                                     GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                 reinterpret_cast<LPCWSTR>(&pluginModuleDirectory),
+                                 &module))
+        {
+            wchar_t path[MAX_PATH] {};
+            const auto length = ::GetModuleFileNameW(module, path, MAX_PATH);
+            if (length > 0 && length < MAX_PATH)
+                return std::filesystem::path {path}.parent_path().string();
+        }
+#endif
+        return {};
+    }
+
     [[nodiscard]] std::string normalizeModeName(std::string value)
     {
         for (auto& ch : value)
@@ -696,11 +716,18 @@ namespace
             m_ApplicationId = getEnvUint32("VULTRA_DLSS_APPLICATION_ID");
             if (m_StreamlineBin.empty() && !m_StreamlineSdkRoot.empty())
                 m_StreamlineBin = (std::filesystem::path {m_StreamlineSdkRoot} / "bin" / "x64").string();
+            // The Streamline runtime DLLs are bundled in the plugin root, so the default needs no
+            // environment configuration: the engine-provided plugin root, then this DLL's own folder.
+            if (m_StreamlineBin.empty())
+                m_StreamlineBin = getEnvString("VULTRA_PLUGIN_ROOT");
+            if (m_StreamlineBin.empty())
+                m_StreamlineBin = pluginModuleDirectory();
 
 #if VULTRA_DLSS_WITH_STREAMLINE
             if (m_StreamlineBin.empty())
             {
-                m_StatusMessage = "VULTRA_DLSS_STREAMLINE_BIN is not set";
+                m_StatusMessage = "Streamline runtime folder could not be resolved (no bundled DLL folder, "
+                                  "VULTRA_DLSS_STREAMLINE_BIN/SDK_ROOT unset)";
                 return false;
             }
 
