@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "com.vultra.dlss",
   "name": "Streamline Upscaler",
-  "version": "0.2.1",
+  "version": "0.1.0",
   "author": "Vultra",
   "description": "NVIDIA Streamline bridge exposing DLSS Super Resolution. The Streamline runtime DLLs are bundled with the plugin, so no environment configuration is needed to use it.",
   "repository": "https://github.com/zzxzzk115/vultra-plugin-streamline",
