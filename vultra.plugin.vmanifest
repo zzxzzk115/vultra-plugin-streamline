@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "author": "Vultra",
   "description": "Project-local NVIDIA Streamline bridge. V0 exposes DLSS Super Resolution; later versions can add more Streamline features. SDK paths and private IDs are loaded from local .env configuration.",
+  "repository": "https://github.com/zzxzzk115/vultra-plugin-streamline",
   "platforms": ["windows"],
   "loadPhase": "pre_render_device",
   "native": "vultra_plugin_dlss",
