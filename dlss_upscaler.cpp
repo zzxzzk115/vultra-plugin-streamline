@@ -1,3 +1,4 @@
+#include <vultra/core/base/common_context.hpp>
 #include <vultra/core/engine/engine_context.hpp>
 #include <vultra/core/plugin/engine_plugin.hpp>
 #include <vultra/core/rhi/backends/vk/conversions.hpp>
@@ -12,7 +13,6 @@
 #endif
 
 #include <cstdlib>
-#include <cstdio>
 #include <cctype>
 #include <filesystem>
 #include <charconv>
@@ -189,8 +189,19 @@ namespace
 
     void slLogCallback(sl::LogType type, const char* message)
     {
-        const char* label = type == sl::LogType::eError ? "error" : type == sl::LogType::eWarn ? "warn" : "info";
-        std::printf("[vultra_plugin_dlss][sl][%s] %s\n", label, message != nullptr ? message : "");
+        const char* text = message != nullptr ? message : "";
+        if (type == sl::LogType::eError)
+        {
+            VULTRA_CLIENT_ERROR("[vultra_plugin_dlss][sl] {}", text);
+        }
+        else if (type == sl::LogType::eWarn)
+        {
+            VULTRA_CLIENT_WARN("[vultra_plugin_dlss][sl] {}", text);
+        }
+        else
+        {
+            VULTRA_CLIENT_TRACE("[vultra_plugin_dlss][sl] {}", text);
+        }
     }
 
     [[nodiscard]] const char* resultName(const sl::Result result)
@@ -452,17 +463,17 @@ namespace
             {
                 const vultra::rhi::Extent2D optimal {settings.optimalRenderWidth, settings.optimalRenderHeight};
                 m_OptimalExtentCache.emplace(key, optimal);
-                std::printf("[vultra_plugin_dlss] DLSS optimal extent: output=%ux%u mode=%s optimal=%ux%u "
-                            "min=%ux%u max=%ux%u\n",
-                            outputExtent.width,
-                            outputExtent.height,
-                            vultra::upscalerModeName(mode).data(),
-                            settings.optimalRenderWidth,
-                            settings.optimalRenderHeight,
-                            settings.renderWidthMin,
-                            settings.renderHeightMin,
-                            settings.renderWidthMax,
-                            settings.renderHeightMax);
+                VULTRA_CLIENT_INFO("[vultra_plugin_dlss] DLSS optimal extent: output={}x{} mode={} optimal={}x{} "
+                                   "min={}x{} max={}x{}",
+                                   outputExtent.width,
+                                   outputExtent.height,
+                                   vultra::upscalerModeName(mode),
+                                   settings.optimalRenderWidth,
+                                   settings.optimalRenderHeight,
+                                   settings.renderWidthMin,
+                                   settings.renderHeightMin,
+                                   settings.renderWidthMax,
+                                   settings.renderHeightMax);
                 return optimal;
             }
 #endif
@@ -509,19 +520,19 @@ namespace
             if (isDlssUpscalingMode && context.renderExtent.width == context.outputExtent.width &&
                 context.renderExtent.height == context.outputExtent.height && !viewportState.warnedNoScale)
             {
-                std::printf(
-                    "[vultra_plugin_dlss] warning: DLSS is active but render extent equals output extent "
-                    "(%ux%u). The graph is evaluating DLSS, but the renderer is not yet rendering at the "
-                    "DLSS optimal input resolution.\n",
+                VULTRA_CLIENT_WARN(
+                    "[vultra_plugin_dlss] DLSS is active but render extent equals output extent "
+                    "({}x{}). The graph is evaluating DLSS, but the renderer is not yet rendering at the "
+                    "DLSS optimal input resolution.",
                     context.renderExtent.width,
                     context.renderExtent.height);
                 viewportState.warnedNoScale = true;
             }
             if (m_ViewportStates.size() > 4 && !m_WarnedManyViewports)
             {
-                std::printf(
-                    "[vultra_plugin_dlss] warning: DLSS has seen %zu viewport handles. Viewport IDs should be "
-                    "stable; unstable IDs can make Streamline keep allocating history resources.\n",
+                VULTRA_CLIENT_WARN(
+                    "[vultra_plugin_dlss] DLSS has seen {} viewport handles. Viewport IDs should be "
+                    "stable; unstable IDs can make Streamline keep allocating history resources.",
                     m_ViewportStates.size());
                 m_WarnedManyViewports = true;
             }
@@ -549,9 +560,9 @@ namespace
                 if (viewportState.optionsSet)
                 {
                     slFreeResources(sl::kFeatureDLSS, viewport);
-                    std::printf(
-                        "[vultra_plugin_dlss] DLSS viewport %u options changed; freed old feature resources "
-                        "(render=%ux%u output=%ux%u mode=%s).\n",
+                    VULTRA_CORE_INFO(
+                        "[vultra_plugin_dlss] DLSS viewport {} options changed; freed old feature resources "
+                        "(render={}x{} output={}x{} mode={}).",
                         viewportKey,
                         context.renderExtent.width,
                         context.renderExtent.height,
@@ -573,16 +584,16 @@ namespace
                 viewportState.mode         = context.settings.mode;
                 viewportState.renderExtent = context.renderExtent;
                 viewportState.outputExtent = context.outputExtent;
-                std::printf("[vultra_plugin_dlss] DLSS options set for viewport %u: render=%ux%u output=%ux%u "
-                            "mode=%s hdr=%s autoExposure=%s\n",
-                            viewportKey,
-                            context.renderExtent.width,
-                            context.renderExtent.height,
-                            context.outputExtent.width,
-                            context.outputExtent.height,
-                            vultra::upscalerModeName(context.settings.mode).data(),
-                            context.settings.hdr ? "true" : "false",
-                            context.settings.autoExposure ? "true" : "false");
+                VULTRA_CORE_INFO("[vultra_plugin_dlss] DLSS options set for viewport {}: render={}x{} output={}x{} "
+                                 "mode={} hdr={} autoExposure={}",
+                                 viewportKey,
+                                 context.renderExtent.width,
+                                 context.renderExtent.height,
+                                 context.outputExtent.width,
+                                 context.outputExtent.height,
+                                 vultra::upscalerModeName(context.settings.mode),
+                                 context.settings.hdr,
+                                 context.settings.autoExposure);
             }
 
             const auto constants = toSlConstants(context.constants);
@@ -613,8 +624,10 @@ namespace
                     .width  = tag.resource.extent.width,
                     .height = tag.resource.extent.height,
                 });
-                tags.emplace_back(
-                    &resources.back(), toSlRole(tag.role), sl::ResourceLifecycle::eOnlyValidNow, &extents.back());
+                tags.emplace_back(&resources.back(),
+                                  toSlRole(tag.role),
+                                  sl::ResourceLifecycle::eValidUntilEvaluate,
+                                  &extents.back());
             }
 
             auto* commandBuffer = reinterpret_cast<sl::CommandBuffer*>(context.command.commandBufferHandle);
@@ -651,15 +664,15 @@ namespace
             ++m_EvaluateCount;
             if (m_EvaluateCount <= 3 || (m_EvaluateCount % 120) == 0)
             {
-                std::printf("[vultra_plugin_dlss] slEvaluateFeature(DLSS) ok #%llu viewport=%u render=%ux%u "
-                            "output=%ux%u tags=%zu\n",
-                            static_cast<unsigned long long>(m_EvaluateCount),
-                            viewportKey,
-                            context.renderExtent.width,
-                            context.renderExtent.height,
-                            context.outputExtent.width,
-                            context.outputExtent.height,
-                            tags.size());
+                VULTRA_CORE_INFO("[vultra_plugin_dlss] slEvaluateFeature(DLSS) ok #{} viewport={} render={}x{} "
+                                 "output={}x{} tags={}",
+                                 m_EvaluateCount,
+                                 viewportKey,
+                                 context.renderExtent.width,
+                                 context.renderExtent.height,
+                                 context.outputExtent.width,
+                                 context.outputExtent.height,
+                                 tags.size());
             }
             return true;
 #else
@@ -686,13 +699,11 @@ namespace
 #if VULTRA_DLSS_WITH_STREAMLINE
             if (m_Initialized)
             {
-                std::printf("[vultra_plugin_dlss] slShutdown begin\n");
-                std::fflush(stdout);
+                VULTRA_CLIENT_INFO("[vultra_plugin_dlss] slShutdown begin");
                 const auto result = slShutdown();
-                std::printf("[vultra_plugin_dlss] slShutdown end: %s (%d)\n",
-                            resultName(result),
-                            static_cast<int>(result));
-                std::fflush(stdout);
+                VULTRA_CLIENT_INFO("[vultra_plugin_dlss] slShutdown end: {} ({})",
+                                   resultName(result),
+                                   static_cast<int>(result));
                 m_ViewportStates.clear();
                 m_OptimalExtentCache.clear();
                 m_Initialized = false;
@@ -755,14 +766,14 @@ namespace
                                       result);
             if (!m_Initialized)
             {
-                std::printf("[vultra_plugin_dlss] slInit failed: %s (%d)\n",
-                            resultName(result),
-                            static_cast<int>(result));
+                VULTRA_CLIENT_ERROR("[vultra_plugin_dlss] slInit failed: {} ({})",
+                                    resultName(result),
+                                    static_cast<int>(result));
             }
             if (m_Initialized)
             {
-                std::printf("[vultra_plugin_dlss] Integration mode: %s\n", integrationMode().c_str());
-                std::printf("[vultra_plugin_dlss] %s\n", describeFeatureRequirements().c_str());
+                VULTRA_CLIENT_INFO("[vultra_plugin_dlss] Integration mode: {}", integrationMode());
+                VULTRA_CLIENT_INFO("[vultra_plugin_dlss] {}", describeFeatureRequirements());
                 collectStreamlineRequirements();
                 loadVulkanHooks();
             }
@@ -809,7 +820,7 @@ namespace
                     std::string {"slSetVulkanInfo failed: "} + resultName(result) + " (" +
                         std::to_string(static_cast<int>(result)) + ")",
                     result);
-                std::printf("[vultra_plugin_dlss] %s\n", m_StatusMessage.c_str());
+                VULTRA_CLIENT_ERROR("[vultra_plugin_dlss] {}", m_StatusMessage);
             }
 #else
             static_cast<void>(device);
@@ -862,14 +873,14 @@ namespace
                 reinterpret_cast<std::uintptr_t>(&dlssPostCmdBindPipeline);
             m_Hooks.vkPostCmdBindDescriptorSets =
                 reinterpret_cast<std::uintptr_t>(&dlssPostCmdBindDescriptorSets);
-            std::printf("[vultra_plugin_dlss] Vulkan dispatch hooks: %s\n",
-                        m_Hooks.vkGetInstanceProcAddr != 0 && m_Hooks.vkGetDeviceProcAddr != 0 ? "ready" :
-                                                                                                  "missing");
-            std::printf("[vultra_plugin_dlss] Vulkan command-state callbacks: %s\n",
-                        m_Hooks.vkPostBeginCommandBuffer != 0 && m_Hooks.vkPostCmdBindPipeline != 0 &&
-                                m_Hooks.vkPostCmdBindDescriptorSets != 0 ?
-                            "ready" :
-                            "missing");
+            VULTRA_CLIENT_INFO("[vultra_plugin_dlss] Vulkan dispatch hooks: {}",
+                               m_Hooks.vkGetInstanceProcAddr != 0 && m_Hooks.vkGetDeviceProcAddr != 0 ? "ready" :
+                                                                                                         "missing");
+            VULTRA_CLIENT_INFO("[vultra_plugin_dlss] Vulkan command-state callbacks: {}",
+                               m_Hooks.vkPostBeginCommandBuffer != 0 && m_Hooks.vkPostCmdBindPipeline != 0 &&
+                                       m_Hooks.vkPostCmdBindDescriptorSets != 0 ?
+                                   "ready" :
+                                   "missing");
             m_StatusMessage = m_Hooks.empty() ? "Streamline Vulkan hooks unavailable" :
                                                 std::string {"Streamline initialized in "} + integrationMode() +
                                                     " mode; waiting for Vulkan device";
@@ -885,9 +896,9 @@ namespace
             const auto result = slGetFeatureRequirements(sl::kFeatureDLSS, requirements);
             if (result != sl::Result::eOk)
             {
-                std::printf("[vultra_plugin_dlss] Cannot collect DLSS Vulkan requirements: %s (%d)\n",
-                            resultName(result),
-                            static_cast<int>(result));
+                VULTRA_CLIENT_ERROR("[vultra_plugin_dlss] Cannot collect DLSS Vulkan requirements: {} ({})",
+                                    resultName(result),
+                                    static_cast<int>(result));
                 return;
             }
 
@@ -896,8 +907,8 @@ namespace
                 if (requirements.vkDeviceExtensions != nullptr && requirements.vkDeviceExtensions[i] != nullptr)
                 {
                     m_RequiredDeviceExtensions.emplace_back(requirements.vkDeviceExtensions[i]);
-                    std::printf("[vultra_plugin_dlss] Requesting Vulkan device extension: %s\n",
-                                requirements.vkDeviceExtensions[i]);
+                    VULTRA_CLIENT_INFO("[vultra_plugin_dlss] Requesting Vulkan device extension: {}",
+                                       requirements.vkDeviceExtensions[i]);
                 }
             }
         }
@@ -921,7 +932,7 @@ namespace
             const auto supportResult     = slIsFeatureSupported(sl::kFeatureDLSS, adapterInfo);
             if (supportResult == sl::Result::eOk)
             {
-                std::printf("[vultra_plugin_dlss] DLSS feature support check: supported\n");
+                VULTRA_CLIENT_INFO("[vultra_plugin_dlss] DLSS feature support check: supported");
                 return;
             }
 
@@ -929,8 +940,8 @@ namespace
                 std::string {"DLSS feature support check failed: "} + resultName(supportResult) + " (" +
                     std::to_string(static_cast<int>(supportResult)) + ")",
                 supportResult);
-            std::printf("[vultra_plugin_dlss] %s\n", m_StatusMessage.c_str());
-            std::printf("[vultra_plugin_dlss] %s\n", describeFeatureRequirements().c_str());
+            VULTRA_CLIENT_WARN("[vultra_plugin_dlss] {}", m_StatusMessage);
+            VULTRA_CLIENT_INFO("[vultra_plugin_dlss] {}", describeFeatureRequirements());
         }
 
         struct ViewportState
@@ -972,16 +983,17 @@ namespace
             auto* upscaler = ctx.services.tryGet<vultra::IRenderUpscalerService>();
             if (upscaler == nullptr)
             {
-                std::fprintf(stderr, "[vultra_plugin_dlss] upscaler service unavailable\n");
+                VULTRA_CLIENT_ERROR("[vultra_plugin_dlss] upscaler service unavailable");
                 return false;
             }
 
             m_Provider.initialize();
-            std::printf("[vultra_plugin_dlss] Streamline SDK root: %s\n",
-                        m_Provider.streamlineSdkRoot().empty() ? "<unset>" : m_Provider.streamlineSdkRoot().c_str());
-            std::printf("[vultra_plugin_dlss] Streamline bin: %s\n",
-                        m_Provider.streamlineBin().empty() ? "<derive from SDK root>" :
-                                                             m_Provider.streamlineBin().c_str());
+            VULTRA_CLIENT_INFO("[vultra_plugin_dlss] Streamline SDK root: {}",
+                               m_Provider.streamlineSdkRoot().empty() ? "<unset>" :
+                                                                        m_Provider.streamlineSdkRoot());
+            VULTRA_CLIENT_INFO("[vultra_plugin_dlss] Streamline bin: {}",
+                               m_Provider.streamlineBin().empty() ? "<derive from SDK root>" :
+                                                                    m_Provider.streamlineBin());
 
             if (auto* backendExtensions = ctx.services.tryGet<vultra::IRenderBackendExtensionService>())
                 backendExtensions->registerExtension(m_Provider);
@@ -997,17 +1009,17 @@ namespace
             if (!defaultModeName.empty() && defaultMode == vultra::UpscalerMode::eOff &&
                 normalizedModeName != "off")
             {
-                std::printf("[vultra_plugin_dlss] Unknown VULTRA_DLSS_MODE='%s'; falling back to performance. "
-                            "Accepted values: ultra_quality, quality, balanced, performance, "
-                            "ultra_performance, dlaa, off.\n",
-                            defaultModeName.c_str());
+                VULTRA_CLIENT_WARN("[vultra_plugin_dlss] Unknown VULTRA_DLSS_MODE='{}'; falling back to performance. "
+                                   "Accepted values: ultra_quality, quality, balanced, performance, "
+                                   "ultra_performance, dlaa, off.",
+                                   defaultModeName);
                 defaultMode = vultra::UpscalerMode::ePerformance;
             }
             if (defaultMode == vultra::UpscalerMode::eOff)
                 upscaler->setEnabled(false);
             else
                 upscaler->setMode(defaultMode);
-            std::printf("[vultra_plugin_dlss] installed provider\n");
+            VULTRA_CLIENT_INFO("[vultra_plugin_dlss] installed provider");
             return registered;
         }
 
@@ -1019,7 +1031,7 @@ namespace
                 backendExtensions->unregisterExtension(m_Provider);
             if (auto* upscaler = ctx.services.tryGet<vultra::IRenderUpscalerService>())
                 upscaler->unregisterProvider(m_Provider);
-            std::printf("[vultra_plugin_dlss] uninstalled\n");
+            VULTRA_CLIENT_INFO("[vultra_plugin_dlss] uninstalled");
         }
 
     private:
